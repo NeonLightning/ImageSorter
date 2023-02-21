@@ -1,4 +1,5 @@
-﻿using System;
+﻿using ImageSorter.Properties;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
@@ -14,7 +15,7 @@ namespace ImageSorter
 {
     public partial class Form1 : Form
     {
-        String listbox1Entry = ("");
+        String listbox1Entry;
 
         public Form1()
         {
@@ -42,15 +43,11 @@ namespace ImageSorter
         private void button5_Click(object sender, EventArgs e)
         {
             listBox1.MoveSelectedItemDown();
-            pictureBox1.Dispose();
-            pictureBox1.Load(listbox1Entry);
         }
 
         private void button6_Click(object sender, EventArgs e)
         {
             listBox1.MoveSelectedItemUp();
-            pictureBox1.Dispose();
-            pictureBox1.Load(listbox1Entry);
         }
 
         private void listBox1_SelectedIndexChanged(object sender, EventArgs e)
@@ -62,7 +59,8 @@ namespace ImageSorter
 
         private void button4_Click(object sender, EventArgs e)
         {
-            listbox1Entry = listBox1.GetItemText(listBox1.SelectedItem);
+            pictureBox1.Dispose();
+            pictureBox1.Load(listbox1Entry);
         }
     }
 
