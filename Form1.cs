@@ -13,7 +13,7 @@ using static System.Windows.Forms.VisualStyles.VisualStyleElement;
 
 namespace ImageSorter
 {
-    public partial class Form1 : Form
+    public partial class MainForm : Form
     {
         private Point _dragStartPoint;
         private int _sourceIndex = -1;
@@ -21,7 +21,7 @@ namespace ImageSorter
         bool movetest = false;
 
 
-        public Form1()
+        public MainForm()
         {
             InitializeComponent();
             listBox1.MouseDown += ListBox1_MouseDown;
@@ -70,42 +70,10 @@ namespace ImageSorter
                     string selectedPath = folderDialog.SelectedPath;
                     Properties.Settings.Default.LastOutputPath = selectedPath;
                     Properties.Settings.Default.Save();
-
-                    // Do something with selectedPath
                 }
             }
         }
 
-        private void RenameFiles()
-        {
-            // Get the current directory
-            string directory = Directory.GetCurrentDirectory();
-
-            // Get the file extensions to filter
-            string[] extensions = { ".jpg", ".jpeg", ".png", ".bmp" };
-
-            // Get the files in the directory with the selected extensions
-            var files = Directory.GetFiles(directory, "*.*", SearchOption.TopDirectoryOnly)
-                .Where(file => extensions.Contains(Path.GetExtension(file), StringComparer.OrdinalIgnoreCase));
-
-            // Rename the files in sequential order
-            int count = 1;
-            foreach (var item in listBox1.Items)
-            {
-                // Get the old and new file names
-                string oldFileName = Path.GetFileName(item.ToString());
-                string newFileName = $"{count}{Path.GetExtension(oldFileName)}";
-
-                // Rename the file if it exists in the directory
-                if (files.Contains(Path.Combine(directory, oldFileName)))
-                {
-                    File.Move(Path.Combine(directory, oldFileName), Path.Combine(directory, newFileName));
-                }
-
-                // Increment the count
-                count++;
-            }
-        }
         private void ListBox1_MouseUp(object sender, MouseEventArgs e)
         {
             _sourceIndex = -1;
@@ -166,7 +134,7 @@ namespace ImageSorter
 private void Button4_Click(object sender, EventArgs e)
 {
     // Create the destination folder
-    string destFolder = Path.Combine(Directory.GetCurrentDirectory(), "SortedImages");
+    string destFolder = Properties.Settings.Default.LastOutputPath;
     Directory.CreateDirectory(destFolder);
 
     // Loop through the files in the list box and copy them to the destination folder
@@ -174,8 +142,7 @@ private void Button4_Click(object sender, EventArgs e)
     {
         string sourceFile = listBox1.Items[i].ToString();
         string extension = Path.GetExtension(sourceFile);
-        string destFile = Path.Combine(destFolder, $"image{i + 1}{extension}");
-
+        string destFile = Path.Combine(destFolder, $"image{(i+1).ToString("000")}{extension}");
         if (File.Exists(sourceFile))
         {
             try
