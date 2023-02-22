@@ -19,6 +19,7 @@ namespace ImageSorter
         private int _sourceIndex = -1;
         String listbox1Entry;
         bool movetest = false;
+        
 
 
         public MainForm()
@@ -46,6 +47,7 @@ namespace ImageSorter
                     string selectedPath = folderDialog.SelectedPath;
                     Properties.Settings.Default.LastFolderPath = selectedPath;
                     Properties.Settings.Default.Save();
+                    listBox1.Items.Clear();
                     foreach (string file in Directory.GetFiles(selectedPath)
                                     .Where(f => imageExtensions.Contains(Path.GetExtension(f).ToLower())))
                     {
@@ -103,35 +105,53 @@ namespace ImageSorter
             _sourceIndex = listBox1.IndexFromPoint(_dragStartPoint);
         }
 
-        private void Button5_Click(object sender, EventArgs e)
+        private void Button5_Click(object sender, EventArgs e) 
         {
-            movetest = true;
             listBox1.MoveSelectedItemDown();
-            pictureBox1.Load(listbox1Entry);
-            movetest = false;
+            if (listBox1.SelectedItem != null) {
+                pictureBox1.Load((string)listBox1.SelectedItem);
+            }
         }
 
         private void Button6_Click(object sender, EventArgs e)
         {
-            movetest = true;
             listBox1.MoveSelectedItemUp();
-            pictureBox1.Load(listbox1Entry);
-            movetest = false;
-        }
-
-        private void ListBox1_SelectedIndexChanged(object sender, EventArgs e)
-        {
-            listbox1Entry = listBox1.GetItemText(listBox1.SelectedItem);
-            this.Name = listbox1Entry;
-            this.Text = listbox1Entry;
-            pictureBox1.ImageLocation = listbox1Entry;
-            if (movetest == false)
-            {
-                pictureBox1.Load(listbox1Entry);
+            if (listBox1.SelectedItem != null) {
+                pictureBox1.Load((string)listBox1.SelectedItem);
             }
         }
 
-private void Button4_Click(object sender, EventArgs e)
+        private void ListBox1_SelectedIndexChanged(object sender, EventArgs e) {
+            if (listBox1.SelectedIndex >= 0 && listBox1.SelectedIndex < listBox1.Items.Count - 1) {
+                button5.Enabled = true;
+            }
+            else {
+                button5.Enabled = false;
+            }
+
+            if (listBox1.SelectedIndex <= 0) {
+                button6.Enabled = false;
+            }
+            else {
+                button6.Enabled = true;
+            }
+            if (listBox1.Items.Count <= 0) {
+                button3.Enabled = false;
+            }
+            else {
+                button3.Enabled= true;
+            }
+            // Get the selected item from the list box
+
+            if (pictureBox1 != null && listBox1.SelectedItem != null) {
+                string selectedImagePath = (string)listBox1.SelectedItem;
+                pictureBox1.Load(selectedImagePath);
+                this.Name = listbox1Entry;
+                this.Text = listbox1Entry;
+            }
+        }
+
+        private void Button4_Click(object sender, EventArgs e)
 {
     // Create the destination folder
     string destFolder = Properties.Settings.Default.LastOutputPath;
@@ -163,8 +183,42 @@ private void Button4_Click(object sender, EventArgs e)
     MessageBox.Show("Files copied successfully");
 }
 
+        private void button3_Click(object sender, EventArgs e)
+        {
+            // Get the selected index in the ListBox
+            int selectedIndex = listBox1.SelectedIndex;
 
+            // Display the next image in the PictureBox control
+            if (selectedIndex < listBox1.Items.Count - 1)
+            {
+                pictureBox1.ImageLocation = listBox1.Items[selectedIndex + 1].ToString();
+            }
+            else if (listBox1.Items.Count > 0)
+            {
+                // If we're at the end of the ListBox, loop back to the start
+                pictureBox1.ImageLocation = listBox1.Items[0].ToString();
+            }
+            else
+            {
+                // If there are no items in the ListBox, display the error image
+                pictureBox1.Image = pictureBox1.ErrorImage;
+            }
 
+            // Remove the selected item from the ListBox
+            listBox1.Items.RemoveAt(selectedIndex);
+
+            // Select the next item in the ListBox
+            if (listBox1.Items.Count > 0)
+            {
+                int nextIndex = Math.Min(selectedIndex, listBox1.Items.Count - 1);
+                listBox1.SelectedIndex = nextIndex;
+            }
+            else
+            {
+                // If there are no items left in the ListBox, clear the selection
+                listBox1.SelectedIndex = -1;
+            }
+        }
     }
 
     public static class ListBoxExtension
