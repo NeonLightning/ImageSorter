@@ -19,7 +19,9 @@ namespace ImageSorter
         private int _sourceIndex = -1;
         String listbox1Entry;
         bool movetest = false;
-        
+        bool deletetest = false;
+
+
 
 
         public MainForm()
@@ -91,10 +93,12 @@ namespace ImageSorter
                 if (targetIndex != -1 && targetIndex != _sourceIndex)
                 {
                     {
-                        object selectedItem = listBox1.Items[_sourceIndex];
-                        listBox1.Items.RemoveAt(_sourceIndex);
-                        listBox1.Items.Insert(targetIndex, selectedItem);
-                        _sourceIndex = targetIndex;
+                        if (listBox1.Items.Count > 1) { 
+                            object selectedItem = listBox1.Items[_sourceIndex];
+                            listBox1.Items.RemoveAt(_sourceIndex);
+                            listBox1.Items.Insert(targetIndex, selectedItem);
+                            _sourceIndex = targetIndex;
+                            }
                     }
                 }
             }
@@ -153,53 +157,69 @@ namespace ImageSorter
 
         private void Button4_Click(object sender, EventArgs e)
 {
-    // Create the destination folder
-    string destFolder = Properties.Settings.Default.LastOutputPath;
-    Directory.CreateDirectory(destFolder);
+ // Create the destination folder
+string destFolder = Properties.Settings.Default.LastOutputPath;
+Directory.CreateDirectory(destFolder);
 
-    // Loop through the files in the list box and copy them to the destination folder
-    for (int i = 0; i < listBox1.Items.Count; i++)
-    {
-        string sourceFile = listBox1.Items[i].ToString();
-        string extension = Path.GetExtension(sourceFile);
-        string destFile = Path.Combine(destFolder, $"image{(i+1).ToString("000")}{extension}");
-        if (File.Exists(sourceFile))
-        {
-            try
-            {
-                File.Copy(sourceFile, destFile, true);
+            // Loop through the files in the list box and move or copy them to the destination folder
+            for (int i = 0; i < listBox1.Items.Count; i++) {
+                string sourceFile = listBox1.Items[i].ToString();
+                string extension = Path.GetExtension(sourceFile);
+                string destFile = Path.Combine(destFolder, $"image{(i + 1).ToString("000")}{extension}");
+                if (File.Exists(sourceFile)) {
+                    try {
+                        if (movetest) {
+                            pictureBox1.Image.Dispose();
+                            pictureBox1.Image = Resources.imagesorterpreview;
+                            File.Move(sourceFile, destFile);
+                            listBox1.Items.Clear();
+                        }
+                        else {
+                            File.Copy(sourceFile, destFile, true);
+                        }
+                    }
+                    catch (Exception ex) {
+                        MessageBox.Show($"Error {(movetest ? "moving" : "copying")} file {sourceFile}: {ex.Message}");
+                    }
+                }
+                else {
+                    MessageBox.Show($"File {sourceFile} does not exist");
+                }
             }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Error copying file {sourceFile}: {ex.Message}");
-            }
-        }
-        else
-        {
-            MessageBox.Show($"File {sourceFile} does not exist");
-        }
-    }
 
-    MessageBox.Show("Files copied successfully");
-}
-
-        private void button3_Click(object sender, EventArgs e)
-        {
+            MessageBox.Show("Done");
+            pictureBox1.Image = Resources.imagesorterpreview;
+        }
+        private void button3_Click(object sender, EventArgs e) {
             // Get the selected index in the ListBox
             int selectedIndex = listBox1.SelectedIndex;
 
+            if (selectedIndex == -1) return;
+
+            string selectedFile = listBox1.SelectedItem.ToString();
+
+            if (deletetest) {
+                Image img = pictureBox1.Image;
+                pictureBox1.Image = null;
+                img.Dispose();
+                try {
+                    File.Delete(selectedFile);
+                }
+                catch (Exception ex) {
+                    MessageBox.Show($"Error deleting file {selectedFile}: {ex.Message}");
+                    return;
+                }
+            }
+
             // Display the next image in the PictureBox control
-            if (selectedIndex < listBox1.Items.Count - 1)
-            {
+            if (selectedIndex < listBox1.Items.Count - 1) {
                 pictureBox1.ImageLocation = listBox1.Items[selectedIndex + 1].ToString();
             }
-            else if (listBox1.Items.Count > 0)
-            {
+            else if (listBox1.Items.Count > 0) {
                 // If we're at the end of the ListBox, loop back to the start
                 pictureBox1.ImageLocation = listBox1.Items[0].ToString();
             }
-            else
-            {
+            else {
                 // If there are no items in the ListBox, display the error image
                 pictureBox1.Image = pictureBox1.ErrorImage;
             }
@@ -208,15 +228,37 @@ namespace ImageSorter
             listBox1.Items.RemoveAt(selectedIndex);
 
             // Select the next item in the ListBox
-            if (listBox1.Items.Count > 0)
-            {
+            if (listBox1.Items.Count > 0) {
                 int nextIndex = Math.Min(selectedIndex, listBox1.Items.Count - 1);
                 listBox1.SelectedIndex = nextIndex;
             }
-            else
-            {
+            else {
                 // If there are no items left in the ListBox, clear the selection
                 listBox1.SelectedIndex = -1;
+            }
+        }
+
+        private void checkBox1_CheckedChanged(object sender, EventArgs e) {
+            if (checkBox1.Checked) {
+                button4.Text = "Move";
+                movetest = true;
+
+            }
+            else {
+                button4.Text = "Copy";
+                movetest = false;
+            }
+        }
+
+        private void checkBox2_CheckedChanged(object sender, EventArgs e) {
+            if (checkBox2.Checked) {
+                button3.Text = "Delete";
+                deletetest = true;
+
+            }
+            else {
+                button3.Text = "Remove";
+                deletetest = false;
             }
         }
     }
