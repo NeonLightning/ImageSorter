@@ -15,31 +15,65 @@ namespace ImageSorter
 {
     public partial class Form1 : Form
     {
+        private Point _dragStartPoint;
+        private int _sourceIndex = -1;
         String listbox1Entry;
         bool movetest = false;
+
 
         public Form1()
         {
             InitializeComponent();
+            listBox1.MouseDown += ListBox1_MouseDown;
+            listBox1.MouseMove += ListBox1_MouseMove;
+            listBox1.MouseUp += ListBox1_MouseUp;
         }
+
 
         private void Button1_Click(object sender, EventArgs e)
         {
-            DialogResult result = folderBrowserDialog1.ShowDialog();
-            if (result == DialogResult.OK)
+            string lastPath = Properties.Settings.Default.LastFolderPath;
+
+            using (FolderBrowserDialog folderDialog = new FolderBrowserDialog())
             {
-                String dir = folderBrowserDialog1.SelectedPath;
-                String[] extensionList = { "*.jpg", "*.png", "*.bmp" };
-                listBox1.Items.Clear();
-                foreach (String fileExtension in extensionList)
+                folderDialog.SelectedPath = lastPath;
+                folderDialog.ShowNewFolderButton = false;
+
+                DialogResult result = folderDialog.ShowDialog();
+                if (result == DialogResult.OK)
                 {
-                    foreach (String file in Directory.GetFiles(dir, fileExtension, SearchOption.TopDirectoryOnly))
+                    string[] imageExtensions = { ".jpg", ".png", ".bmp" };
+                    string selectedPath = folderDialog.SelectedPath;
+                    Properties.Settings.Default.LastFolderPath = selectedPath;
+                    Properties.Settings.Default.Save();
+                    foreach (string file in Directory.GetFiles(selectedPath)
+                                    .Where(f => imageExtensions.Contains(Path.GetExtension(f).ToLower())))
                     {
                         listBox1.Items.Add(file);
                     }
                 }
             }
+        }
 
+        private void Button2_Click(object sender, EventArgs e)
+        {
+            string lastOutputPath = Properties.Settings.Default.LastOutputPath;
+
+            using (FolderBrowserDialog folderDialog = new FolderBrowserDialog())
+            {
+                folderDialog.SelectedPath = lastOutputPath;
+                folderDialog.ShowNewFolderButton = true;
+
+                DialogResult result = folderDialog.ShowDialog();
+                if (result == DialogResult.OK)
+                {
+                    string selectedPath = folderDialog.SelectedPath;
+                    Properties.Settings.Default.LastOutputPath = selectedPath;
+                    Properties.Settings.Default.Save();
+
+                    // Do something with selectedPath
+                }
+            }
         }
 
         private void RenameFiles()
@@ -48,7 +82,7 @@ namespace ImageSorter
             string directory = Directory.GetCurrentDirectory();
 
             // Get the file extensions to filter
-            string[] extensions = { ".jpg", ".png", ".bmp" };
+            string[] extensions = { ".jpg", ".jpeg", ".png", ".bmp" };
 
             // Get the files in the directory with the selected extensions
             var files = Directory.GetFiles(directory, "*.*", SearchOption.TopDirectoryOnly)
@@ -72,24 +106,33 @@ namespace ImageSorter
                 count++;
             }
         }
-
-        private Point _lastMouseDownLocation;
-
-        private void ListBox1_MouseDown(object sender, MouseEventArgs e)
+        private void ListBox1_MouseUp(object sender, MouseEventArgs e)
         {
-            _lastMouseDownLocation = e.Location;
+            _sourceIndex = -1;
         }
 
         private void ListBox1_MouseMove(object sender, MouseEventArgs e)
         {
             if (e.Button == MouseButtons.Left)
             {
-                int distance = Math.Abs(e.Location.X - _lastMouseDownLocation.X) + Math.Abs(e.Location.Y - _lastMouseDownLocation.Y);
-                if (distance > 5)
+
+                int targetIndex = listBox1.IndexFromPoint(e.Location);
+
+                if (targetIndex != -1 && targetIndex != _sourceIndex)
                 {
-                    DoDragDrop(listBox1.SelectedItem, DragDropEffects.Move);
+                    {
+                        object selectedItem = listBox1.Items[_sourceIndex];
+                        listBox1.Items.RemoveAt(_sourceIndex);
+                        listBox1.Items.Insert(targetIndex, selectedItem);
+                        _sourceIndex = targetIndex;
+                    }
                 }
             }
+        }
+        private void ListBox1_MouseDown(object sender, MouseEventArgs e)
+        {
+            _dragStartPoint = new Point(e.X, e.Y);
+            _sourceIndex = listBox1.IndexFromPoint(_dragStartPoint);
         }
 
         private void Button5_Click(object sender, EventArgs e)
@@ -120,37 +163,41 @@ namespace ImageSorter
             }
         }
 
-        private void Button4_Click(object sender, EventArgs e)
+private void Button4_Click(object sender, EventArgs e)
+{
+    // Create the destination folder
+    string destFolder = Path.Combine(Directory.GetCurrentDirectory(), "SortedImages");
+    Directory.CreateDirectory(destFolder);
+
+    // Loop through the files in the list box and copy them to the destination folder
+    for (int i = 0; i < listBox1.Items.Count; i++)
+    {
+        string sourceFile = listBox1.Items[i].ToString();
+        string extension = Path.GetExtension(sourceFile);
+        string destFile = Path.Combine(destFolder, $"image{i + 1}{extension}");
+
+        if (File.Exists(sourceFile))
         {
-            // Create the destination folder
-            string destFolder = Path.Combine(Directory.GetCurrentDirectory(), "SortedImages");
-            Directory.CreateDirectory(destFolder);
-
-            // Loop through the files in the list box and copy them to the destination folder
-            for (int i = 0; i < listBox1.Items.Count; i++)
+            try
             {
-                string sourceFile = listBox1.Items[i].ToString();
-                string destFile = Path.Combine(destFolder, $"image{i + 1}.png");
-
-                if (File.Exists(sourceFile))
-                {
-                    try
-                    {
-                        File.Copy(sourceFile, destFile, true);
-                    }
-                    catch (Exception ex)
-                    {
-                        MessageBox.Show($"Error copying file {sourceFile}: {ex.Message}");
-                    }
-                }
-                else
-                {
-                    MessageBox.Show($"File {sourceFile} does not exist");
-                }
+                File.Copy(sourceFile, destFile, true);
             }
-
-            MessageBox.Show("Files copied successfully");
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error copying file {sourceFile}: {ex.Message}");
+            }
         }
+        else
+        {
+            MessageBox.Show($"File {sourceFile} does not exist");
+        }
+    }
+
+    MessageBox.Show("Files copied successfully");
+}
+
+
+
     }
 
     public static class ListBoxExtension
