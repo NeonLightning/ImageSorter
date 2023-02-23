@@ -17,7 +17,6 @@ namespace ImageSorter {
 
         public MainForm() {
             InitializeComponent();
-            pictureBox1.SizeMode = PictureBoxSizeMode.StretchImage;
             listBox1.MouseDown += ListBox1_MouseDown;
             listBox1.MouseMove += ListBox1_MouseMove;
             listBox1.MouseUp += ListBox1_MouseUp;
@@ -25,44 +24,6 @@ namespace ImageSorter {
                 string selectedImagePath = (string)listBox1.SelectedItem;
                 return Image.FromFile(selectedImagePath);
             });
-        }
-
-        private void Form1_Load(object sender, EventArgs e) {
-            // Load the image into the PictureBox control
-            // Set the initial zoom factor
-            pictureBox1.Image = Resources.imagesorterpreview;
-            zoomFactor = 1.0;
-        }
-
-        private double zoomFactor;
-
-        private void ResizeImageInPictureBox() {
-            if (pictureBox1.Image == null) return;
-
-            int width = ClientSize.Width;
-            int height = ClientSize.Height;
-
-            float ratio = Math.Min((float)width / pictureBox1.Image.Width, (float)height / pictureBox1.Image.Height);
-            int newWidth = (int)(pictureBox1.Image.Width * ratio);
-            int newHeight = (int)(pictureBox1.Image.Height * ratio);
-
-            pictureBox1.Image = new Bitmap(pictureBox1.Image, newWidth, newHeight);
-            if (pictureBox1.Width < pictureBox1.Image.Width || pictureBox1.Height < pictureBox1.Image.Height) {
-                // If the control is too small, set the SizeMode property to AutoSize.
-                pictureBox1.SizeMode = PictureBoxSizeMode.AutoSize;
-                pictureBox1.Image = Resources.imagesorterpreview;
-            }
-        }
-
-        private void Form1_Resize(object sender, EventArgs e) {
-            // Calculate the new size of the image based on the new size of the PictureBox and the zoom factor
-            int newWidth = (int)(pictureBox1.Width * zoomFactor);
-            int newHeight = (int)(pictureBox1.Height * zoomFactor);
-
-            // Resize the image and update the PictureBox control
-            Bitmap bitmap = new Bitmap(pictureBox1.Image, newWidth, newHeight);
-            pictureBox1.SizeMode = PictureBoxSizeMode.Zoom;
-            pictureBox1.Image = bitmap;
         }
 
         public class ListItem {
