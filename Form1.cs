@@ -1,22 +1,16 @@
 ﻿using ImageSorter.Properties;
 using System;
-using System.Collections.Generic;
-using System.ComponentModel;
 using System.Data;
 using System.Drawing;
 using System.IO;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Forms;
-using static System.Windows.Forms.VisualStyles.VisualStyleElement;
 
-namespace ImageSorter
-{
-    public partial class MainForm : Form
-    {
+namespace ImageSorter {
+    public partial class MainForm : Form {
         private Point _dragStartPoint;
         private int _sourceIndex = -1;
+        private Lazy<Image> lazyImage;
         String listbox1Entry;
         bool movetest = false;
         bool deletetest = false;
@@ -24,53 +18,49 @@ namespace ImageSorter
 
 
 
-        public MainForm()
-        {
+        public MainForm() {
             InitializeComponent();
             listBox1.MouseDown += ListBox1_MouseDown;
             listBox1.MouseMove += ListBox1_MouseMove;
             listBox1.MouseUp += ListBox1_MouseUp;
+            lazyImage = new Lazy<Image>(() => {
+                string selectedImagePath = (string)listBox1.SelectedItem;
+                return Image.FromFile(selectedImagePath);
+            });
         }
 
 
-        private void Button1_Click(object sender, EventArgs e)
-        {
+        private void Button1_Click(object sender, EventArgs e) {
             string lastPath = Properties.Settings.Default.LastFolderPath;
 
-            using (FolderBrowserDialog folderDialog = new FolderBrowserDialog())
-            {
+            using (FolderBrowserDialog folderDialog = new FolderBrowserDialog()) {
                 folderDialog.SelectedPath = lastPath;
                 folderDialog.ShowNewFolderButton = false;
 
                 DialogResult result = folderDialog.ShowDialog();
-                if (result == DialogResult.OK)
-                {
+                if (result == DialogResult.OK) {
                     string[] imageExtensions = { ".jpg", ".png", ".bmp" };
                     string selectedPath = folderDialog.SelectedPath;
                     Properties.Settings.Default.LastFolderPath = selectedPath;
                     Properties.Settings.Default.Save();
                     listBox1.Items.Clear();
                     foreach (string file in Directory.GetFiles(selectedPath)
-                                    .Where(f => imageExtensions.Contains(Path.GetExtension(f).ToLower())))
-                    {
+                                    .Where(f => imageExtensions.Contains(Path.GetExtension(f).ToLower()))) {
                         listBox1.Items.Add(file);
                     }
                 }
             }
         }
 
-        private void Button2_Click(object sender, EventArgs e)
-        {
+        private void Button2_Click(object sender, EventArgs e) {
             string lastOutputPath = Properties.Settings.Default.LastOutputPath;
 
-            using (FolderBrowserDialog folderDialog = new FolderBrowserDialog())
-            {
+            using (FolderBrowserDialog folderDialog = new FolderBrowserDialog()) {
                 folderDialog.SelectedPath = lastOutputPath;
                 folderDialog.ShowNewFolderButton = true;
 
                 DialogResult result = folderDialog.ShowDialog();
-                if (result == DialogResult.OK)
-                {
+                if (result == DialogResult.OK) {
                     string selectedPath = folderDialog.SelectedPath;
                     Properties.Settings.Default.LastOutputPath = selectedPath;
                     Properties.Settings.Default.Save();
@@ -78,50 +68,45 @@ namespace ImageSorter
             }
         }
 
-        private void ListBox1_MouseUp(object sender, MouseEventArgs e)
-        {
+        private void ListBox1_MouseUp(object sender, MouseEventArgs e) {
             _sourceIndex = -1;
         }
 
-        private void ListBox1_MouseMove(object sender, MouseEventArgs e)
-        {
-            if (e.Button == MouseButtons.Left)
-            {
+        private void ListBox1_MouseMove(object sender, MouseEventArgs e) {
+            if (e.Button == MouseButtons.Left) {
 
                 int targetIndex = listBox1.IndexFromPoint(e.Location);
 
-                if (targetIndex != -1 && targetIndex != _sourceIndex)
-                {
+                if (targetIndex != -1 && targetIndex != _sourceIndex) {
                     {
-                        if (listBox1.Items.Count > 1) { 
+                        if (listBox1.Items.Count > 1) {
                             object selectedItem = listBox1.Items[_sourceIndex];
                             listBox1.Items.RemoveAt(_sourceIndex);
                             listBox1.Items.Insert(targetIndex, selectedItem);
                             _sourceIndex = targetIndex;
-                            }
+                        }
                     }
                 }
             }
         }
-        private void ListBox1_MouseDown(object sender, MouseEventArgs e)
-        {
+        private void ListBox1_MouseDown(object sender, MouseEventArgs e) {
             _dragStartPoint = new Point(e.X, e.Y);
             _sourceIndex = listBox1.IndexFromPoint(_dragStartPoint);
         }
 
-        private void Button5_Click(object sender, EventArgs e) 
-        {
+        private void Button5_Click(object sender, EventArgs e) {
             listBox1.MoveSelectedItemDown();
             if (listBox1.SelectedItem != null) {
-                pictureBox1.Load((string)listBox1.SelectedItem);
+                pictureBox1.Image = lazyImage.Value;
             }
         }
 
-        private void Button6_Click(object sender, EventArgs e)
-        {
+        private void Button6_Click(object sender, EventArgs e) {
             listBox1.MoveSelectedItemUp();
             if (listBox1.SelectedItem != null) {
-                pictureBox1.Load((string)listBox1.SelectedItem);
+                if (listBox1.SelectedItem != null) {
+                    pictureBox1.Image = lazyImage.Value;
+                }
             }
         }
 
@@ -143,23 +128,23 @@ namespace ImageSorter
                 button3.Enabled = false;
             }
             else {
-                button3.Enabled= true;
+                button3.Enabled = true;
             }
             // Get the selected item from the list box
 
             if (pictureBox1 != null && listBox1.SelectedItem != null) {
                 string selectedImagePath = (string)listBox1.SelectedItem;
-                pictureBox1.Load(selectedImagePath);
                 this.Name = listbox1Entry;
                 this.Text = listbox1Entry;
+                lazyImage = new Lazy<Image>(() => Image.FromFile(selectedImagePath));
+                pictureBox1.Image = lazyImage.Value;
             }
         }
 
-        private void Button4_Click(object sender, EventArgs e)
-{
- // Create the destination folder
-string destFolder = Properties.Settings.Default.LastOutputPath;
-Directory.CreateDirectory(destFolder);
+        private void Button4_Click(object sender, EventArgs e) {
+            // Create the destination folder
+            string destFolder = Properties.Settings.Default.LastOutputPath;
+            Directory.CreateDirectory(destFolder);
 
             // Loop through the files in the list box and move or copy them to the destination folder
             for (int i = 0; i < listBox1.Items.Count; i++) {
@@ -170,9 +155,9 @@ Directory.CreateDirectory(destFolder);
                     try {
                         if (movetest) {
                             pictureBox1.Image.Dispose();
+                            pictureBox1.Image = null;
                             pictureBox1.Image = Resources.imagesorterpreview;
                             File.Move(sourceFile, destFile);
-                            listBox1.Items.Clear();
                         }
                         else {
                             File.Copy(sourceFile, destFile, true);
@@ -186,8 +171,11 @@ Directory.CreateDirectory(destFolder);
                     MessageBox.Show($"File {sourceFile} does not exist");
                 }
             }
+            if (movetest) { listBox1.Items.Clear(); }
 
             MessageBox.Show("Done");
+            pictureBox1.Image.Dispose();
+            pictureBox1.Image = null;
             pictureBox1.Image = Resources.imagesorterpreview;
         }
         private void button3_Click(object sender, EventArgs e) {
@@ -199,44 +187,26 @@ Directory.CreateDirectory(destFolder);
             string selectedFile = listBox1.SelectedItem.ToString();
 
             if (deletetest) {
-                Image img = pictureBox1.Image;
-                pictureBox1.Image = null;
-                img.Dispose();
+                if (listBox1.SelectedItem != null) {
+                    //pictureBox1.Image = lazyImage.Value;
+                    pictureBox1.Image.Dispose();
+                    pictureBox1.Image = null;
+                }
                 try {
                     File.Delete(selectedFile);
+                    listBox1.Items.Remove(listBox1.SelectedItem);
                 }
                 catch (Exception ex) {
                     MessageBox.Show($"Error deleting file {selectedFile}: {ex.Message}");
                     return;
                 }
             }
-
-            // Display the next image in the PictureBox control
-            if (selectedIndex < listBox1.Items.Count - 1) {
-                pictureBox1.ImageLocation = listBox1.Items[selectedIndex + 1].ToString();
-            }
-            else if (listBox1.Items.Count > 0) {
-                // If we're at the end of the ListBox, loop back to the start
-                pictureBox1.ImageLocation = listBox1.Items[0].ToString();
-            }
             else {
-                // If there are no items in the ListBox, display the error image
-                pictureBox1.Image = pictureBox1.ErrorImage;
+                listBox1.Items.Remove(listBox1.SelectedItem);
             }
 
-            // Remove the selected item from the ListBox
-            listBox1.Items.RemoveAt(selectedIndex);
-
-            // Select the next item in the ListBox
-            if (listBox1.Items.Count > 0) {
-                int nextIndex = Math.Min(selectedIndex, listBox1.Items.Count - 1);
-                listBox1.SelectedIndex = nextIndex;
-            }
-            else {
-                // If there are no items left in the ListBox, clear the selection
-                listBox1.SelectedIndex = -1;
-            }
         }
+
 
         private void checkBox1_CheckedChanged(object sender, EventArgs e) {
             if (checkBox1.Checked) {
@@ -263,20 +233,16 @@ Directory.CreateDirectory(destFolder);
         }
     }
 
-    public static class ListBoxExtension
-    {
-        public static void MoveSelectedItemUp(this ListBox listBox)
-        {
+    public static class ListBoxExtension {
+        public static void MoveSelectedItemUp(this ListBox listBox) {
             MoveSelectedItem(listBox, -1);
         }
 
-        public static void MoveSelectedItemDown(this ListBox listBox)
-        {
+        public static void MoveSelectedItemDown(this ListBox listBox) {
             MoveSelectedItem(listBox, 1);
         }
 
-        static void MoveSelectedItem(ListBox listBox, int direction)
-        {
+        static void MoveSelectedItem(ListBox listBox, int direction) {
             // Checking selected item
             if (listBox.SelectedItem == null || listBox.SelectedIndex < 0)
                 return; // No selected item - nothing to do

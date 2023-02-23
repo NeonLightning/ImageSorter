@@ -111,7 +111,7 @@
             this.pictureBox1.BackColor = System.Drawing.SystemColors.ControlDark;
             this.pictureBox1.ErrorImage = global::ImageSorter.Properties.Resources.imagesortererror;
             this.pictureBox1.Image = global::ImageSorter.Properties.Resources.imagesorterpreview;
-            this.pictureBox1.InitialImage = global::ImageSorter.Properties.Resources.imagesorterpreview;
+            // this.pictureBox1.InitialImage = global::ImageSorter.Properties.Resources.imagesorterpreview;
             this.pictureBox1.Location = new System.Drawing.Point(356, 77);
             this.pictureBox1.Name = "pictureBox1";
             this.pictureBox1.Size = new System.Drawing.Size(640, 640);
@@ -165,7 +165,7 @@
             this.Controls.Add(this.listBox1);
             this.Controls.Add(this.pictureBox1);
             this.DoubleBuffered = true;
-            this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedToolWindow;
+            this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedSingle;
             this.MaximizeBox = false;
             this.MinimizeBox = false;
             this.Name = "MainForm";
