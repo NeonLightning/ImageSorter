@@ -168,6 +168,7 @@
             this.Controls.Add(this.listBox1);
             this.Controls.Add(this.pictureBox1);
             this.DoubleBuffered = true;
+            this.KeyPreview = true;
             this.MinimizeBox = false;
             this.Name = "MainForm";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;

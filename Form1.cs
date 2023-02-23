@@ -17,6 +17,7 @@ namespace ImageSorter {
 
         public MainForm() {
             InitializeComponent();
+            this.KeyDown += new KeyEventHandler(Form1_KeyDown);
             listBox1.MouseDown += ListBox1_MouseDown;
             listBox1.MouseMove += ListBox1_MouseMove;
             listBox1.MouseUp += ListBox1_MouseUp;
@@ -24,6 +25,33 @@ namespace ImageSorter {
                 string selectedImagePath = (string)listBox1.SelectedItem;
                 return Image.FromFile(selectedImagePath);
             });
+        }
+
+        private void Form1_KeyDown(object sender, KeyEventArgs e) {
+            if (e.KeyCode == Keys.Delete && listBox1.SelectedIndex != -1 && e.Shift) {
+                string selectedFile = Path.Combine(Properties.Settings.Default.LastFolderPath, listBox1.SelectedItem.ToString());
+                if (listBox1.SelectedItem != null) {
+                    try {
+                        pictureBox1.Image.Dispose();
+                        pictureBox1.Image = null;
+                        pictureBox1.Image = Resources.imagesorterpreview;
+                        File.Delete(selectedFile);
+                        listBox1.Items.Remove(listBox1.SelectedItem);
+                    }
+                    catch (Exception ex) {
+                        MessageBox.Show($"Error deleting file {selectedFile}: {ex.Message}");
+                        return;
+                    }
+                }
+
+            }
+            else if (e.KeyCode == Keys.Delete && listBox1.SelectedIndex != -1) {
+                pictureBox1.Image.Dispose();
+                pictureBox1.Image = null;
+                pictureBox1.Image = Resources.imagesorterpreview;
+                this.Text = "Image Sorter";
+                listBox1.Items.Remove(listBox1.SelectedItem);
+            }
         }
 
         public class ListItem {
@@ -184,6 +212,7 @@ namespace ImageSorter {
                             pictureBox1.Image.Dispose();
                             pictureBox1.Image = null;
                             pictureBox1.Image = Resources.imagesorterpreview;
+                            this.Text = "Image Sorter";
                             File.Move(sourceFile, destFile);
                         }
                         else {
@@ -204,6 +233,7 @@ namespace ImageSorter {
             pictureBox1.Image.Dispose();
             pictureBox1.Image = null;
             pictureBox1.Image = Resources.imagesorterpreview;
+            this.Text = "Image Sorter";
         }
         private void button3_Click(object sender, EventArgs e) {
             // Get the selected index in the ListBox
@@ -219,10 +249,12 @@ namespace ImageSorter {
                     pictureBox1.Image.Dispose();
                     pictureBox1.Image = null;
                     pictureBox1.Image = Resources.imagesorterpreview;
+                    this.Text = "Image Sorter";
                 }
                 try {
                     File.Delete(selectedFile);
                     listBox1.Items.Remove(listBox1.SelectedItem);
+                    this.Text = "Image Sorter";
                 }
                 catch (Exception ex) {
                     MessageBox.Show($"Error deleting file {selectedFile}: {ex.Message}");
