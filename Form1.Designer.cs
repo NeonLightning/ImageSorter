@@ -111,7 +111,6 @@
             this.pictureBox1.BackColor = System.Drawing.SystemColors.ControlDark;
             this.pictureBox1.ErrorImage = global::ImageSorter.Properties.Resources.imagesortererror;
             this.pictureBox1.Image = global::ImageSorter.Properties.Resources.imagesorterpreview;
-            // this.pictureBox1.InitialImage = global::ImageSorter.Properties.Resources.imagesorterpreview;
             this.pictureBox1.Location = new System.Drawing.Point(356, 77);
             this.pictureBox1.Name = "pictureBox1";
             this.pictureBox1.Size = new System.Drawing.Size(640, 640);
@@ -166,10 +165,8 @@
             this.Controls.Add(this.pictureBox1);
             this.DoubleBuffered = true;
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedSingle;
-            this.MaximizeBox = false;
             this.MinimizeBox = false;
             this.Name = "MainForm";
-            this.SizeGripStyle = System.Windows.Forms.SizeGripStyle.Hide;
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
             this.Text = "Image Sorter";
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).EndInit();
@@ -179,7 +176,6 @@
         }
 
         #endregion
-        private System.Windows.Forms.PictureBox pictureBox1;
         private System.Windows.Forms.ListBox listBox1;
         private System.Windows.Forms.Button button1;
         private System.Windows.Forms.Button button2;
@@ -190,6 +186,7 @@
         private System.Windows.Forms.Button button3;
         private System.Windows.Forms.CheckBox checkBox1;
         private System.Windows.Forms.CheckBox checkBox2;
+        public System.Windows.Forms.PictureBox pictureBox1;
     }
 }
 

@@ -11,15 +11,13 @@ namespace ImageSorter {
         private Point _dragStartPoint;
         private int _sourceIndex = -1;
         private Lazy<Image> lazyImage;
-        String listbox1Entry;
         bool movetest = false;
         bool deletetest = false;
 
 
-
-
         public MainForm() {
             InitializeComponent();
+            pictureBox1.SizeMode = PictureBoxSizeMode.StretchImage;
             listBox1.MouseDown += ListBox1_MouseDown;
             listBox1.MouseMove += ListBox1_MouseMove;
             listBox1.MouseUp += ListBox1_MouseUp;
@@ -29,6 +27,57 @@ namespace ImageSorter {
             });
         }
 
+        private void Form1_Load(object sender, EventArgs e) {
+            // Load the image into the PictureBox control
+            // Set the initial zoom factor
+            pictureBox1.Image = Resources.imagesorterpreview;
+            zoomFactor = 1.0;
+        }
+
+        private double zoomFactor;
+
+        private void ResizeImageInPictureBox() {
+            if (pictureBox1.Image == null) return;
+
+            int width = ClientSize.Width;
+            int height = ClientSize.Height;
+
+            float ratio = Math.Min((float)width / pictureBox1.Image.Width, (float)height / pictureBox1.Image.Height);
+            int newWidth = (int)(pictureBox1.Image.Width * ratio);
+            int newHeight = (int)(pictureBox1.Image.Height * ratio);
+
+            pictureBox1.Image = new Bitmap(pictureBox1.Image, newWidth, newHeight);
+            if (pictureBox1.Width < pictureBox1.Image.Width || pictureBox1.Height < pictureBox1.Image.Height) {
+                // If the control is too small, set the SizeMode property to AutoSize.
+                pictureBox1.SizeMode = PictureBoxSizeMode.AutoSize;
+                pictureBox1.Image = Resources.imagesorterpreview;
+            }
+        }
+
+        private void Form1_Resize(object sender, EventArgs e) {
+            // Calculate the new size of the image based on the new size of the PictureBox and the zoom factor
+            int newWidth = (int)(pictureBox1.Width * zoomFactor);
+            int newHeight = (int)(pictureBox1.Height * zoomFactor);
+
+            // Resize the image and update the PictureBox control
+            Bitmap bitmap = new Bitmap(pictureBox1.Image, newWidth, newHeight);
+            pictureBox1.SizeMode = PictureBoxSizeMode.Zoom;
+            pictureBox1.Image = bitmap;
+        }
+
+        public class ListItem {
+            public string Text { get; set; }
+            public string Value { get; set; }
+
+            public ListItem(string text, string value) {
+                Text = text;
+                Value = value;
+            }
+
+            public override string ToString() {
+                return Text;
+            }
+        }
 
         private void Button1_Click(object sender, EventArgs e) {
             string lastPath = Properties.Settings.Default.LastFolderPath;
@@ -46,7 +95,9 @@ namespace ImageSorter {
                     listBox1.Items.Clear();
                     foreach (string file in Directory.GetFiles(selectedPath)
                                     .Where(f => imageExtensions.Contains(Path.GetExtension(f).ToLower()))) {
-                        listBox1.Items.Add(file);
+                        string fileName = Path.GetFileName(file);
+                        listBox1.Items.Add(fileName);
+                        listBox1.Items[listBox1.Items.Count - 1] = new ListItem(fileName, file);
                     }
                 }
             }
@@ -133,9 +184,11 @@ namespace ImageSorter {
             // Get the selected item from the list box
 
             if (pictureBox1 != null && listBox1.SelectedItem != null) {
-                string selectedImagePath = (string)listBox1.SelectedItem;
-                this.Name = listbox1Entry;
-                this.Text = listbox1Entry;
+                ListItem selectedItem = (ListItem)listBox1.SelectedItem;
+                string selectedImagePath = selectedItem.Value;
+                string selectedFileName = selectedItem.Text;
+                this.Name = selectedFileName;
+                this.Text = selectedFileName;
                 lazyImage = new Lazy<Image>(() => Image.FromFile(selectedImagePath));
                 pictureBox1.Image = lazyImage.Value;
             }
@@ -191,6 +244,7 @@ namespace ImageSorter {
                     //pictureBox1.Image = lazyImage.Value;
                     pictureBox1.Image.Dispose();
                     pictureBox1.Image = null;
+                    pictureBox1.Image = Resources.imagesorterpreview;
                 }
                 try {
                     File.Delete(selectedFile);
@@ -232,6 +286,7 @@ namespace ImageSorter {
             }
         }
     }
+
 
     public static class ListBoxExtension {
         public static void MoveSelectedItemUp(this ListBox listBox) {
