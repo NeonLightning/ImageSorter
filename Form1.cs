@@ -60,8 +60,15 @@ namespace ImageSorter {
                         listBox1.Items.Add(fileName);
                         listBox1.Items[listBox1.Items.Count - 1] = new ListItem(fileName, file);
                     }
+                    if (listBox1.Items.Count <= 0) {
+                        button4.Enabled = false;
+                    }
+                    else {
+                        button4.Enabled = true;
+                    }
                 }
             }
+
         }
 
         private void Button2_Click(object sender, EventArgs e) {
@@ -141,6 +148,12 @@ namespace ImageSorter {
             }
             else {
                 button3.Enabled = true;
+            }
+            if (listBox1.Items.Count <= 0) {
+                button4.Enabled = false;
+            }
+            else {
+                button4.Enabled = true;
             }
             // Get the selected item from the list box
 
