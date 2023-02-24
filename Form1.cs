@@ -5,7 +5,6 @@ using System.Data;
 using System.Drawing;
 using System.IO;
 using System.Linq;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace ImageSorter {
@@ -14,7 +13,7 @@ namespace ImageSorter {
         private int _sourceIndex = -1;
         private Lazy<Image> lazyImage;
 #pragma warning disable IDE0044 // Add readonly modifier
-        private HashSet<string> loadedFolders = new HashSet<string>();
+        private HashSet<string> loadedFolders = new();
         private bool move = false;
 #pragma warning restore IDE0044 // Add readonly modifier
 
@@ -53,10 +52,12 @@ namespace ImageSorter {
                 button5.Text = "Top";
                 button6.Text = "Bottom";
             }
-            if (e.KeyCode == Keys.Delete && listBox1.SelectedIndex != -1 && e.Shift) {
+            if (e.KeyCode == Keys.Delete && listBox1.SelectedIndex != -1) {
+               
                 string selectedFile = listBox1.SelectedItem.ToString();
-                bool shiftKeyPressed = Control.ModifierKeys == Keys.Shift;
-                if (shiftKeyPressed) {
+                //bool shiftKeyPressed = Control.ModifierKeys == Keys.Shift;
+                if (e.Shift || e.KeyCode == Keys.Delete) { 
+                   //if (shiftKeyPressed) {
                     if (listBox1.SelectedItem != null) {
                         pictureBox1.Image.Dispose();
                         pictureBox1.Image = null;
@@ -66,6 +67,9 @@ namespace ImageSorter {
                     try {
                         selectedFile = ((ListItem)listBox1.SelectedItem).Value;
                         _ = MessageBox.Show($"deleting file {selectedFile}");
+                        using (FileStream fs = new FileStream(selectedFile, FileMode.Open, FileAccess.ReadWrite, FileShare.None)) {
+                            fs.Close();
+                        }
                         File.Delete(selectedFile);
                         listBox1.Items.Remove(listBox1.SelectedItem);
                         Text = "Image Sorter";
@@ -78,7 +82,6 @@ namespace ImageSorter {
                 else {
                     listBox1.Items.Remove(listBox1.SelectedItem);
                 }
-
             }
             UpdateMoveButtonsEnabled(listBox1);
         }
@@ -113,85 +116,83 @@ namespace ImageSorter {
             // Check if the Shift key is pressed
             string lastPath = Properties.Settings.Default.LastFolderPath;
             if (Control.ModifierKeys == Keys.Shift) {
-                using (OpenFileDialog openFileDialog = new OpenFileDialog()) {
-                    openFileDialog.RestoreDirectory = true;
-                    openFileDialog.Filter = "Image files (.jpg, .png, .bmp)|*.jpg;*.png;*.bmp";
-                    DialogResult result = openFileDialog.ShowDialog();
-                    if (result == DialogResult.OK) {
-                        Form1_KeyUp(sender, new KeyEventArgs(Keys.Shift));
-                        string filePath = openFileDialog.FileName;
-                        if (listBox1.Items.Cast<ListItem>().Any(items => items.Value == filePath)) {
-                            _ = MessageBox.Show($"The file {filePath} is already in the list.");
-                            return;
-                        }
-                        string fileName = Path.GetFileName(filePath);
-                        ListItem item = new ListItem(fileName, filePath);
-                        _ = listBox1.Items.Add(item);
+                using OpenFileDialog openFileDialog = new();
+                openFileDialog.RestoreDirectory = true;
+                openFileDialog.Filter = "Image files (.jpg, .png, .bmp)|*.jpg;*.png;*.bmp";
+                DialogResult result = openFileDialog.ShowDialog();
+                if (result == DialogResult.OK) {
+                    Form1_KeyUp(sender, new KeyEventArgs(Keys.Shift));
+                    string filePath = openFileDialog.FileName;
+                    if (listBox1.Items.Cast<ListItem>().Any(items => items.Value == filePath)) {
+                        _ = MessageBox.Show($"The file {filePath} is already in the list.");
+                        return;
                     }
+                    string fileName = Path.GetFileName(filePath);
+                    ListItem item = new(fileName, filePath);
+                    _ = listBox1.Items.Add(item);
                 }
             }
             else {
                 // Show the FolderBrowserDialog
                 lastPath = Properties.Settings.Default.LastFolderPath;
-                using (FolderBrowserDialog folderDialog = new FolderBrowserDialog()) {
-                    folderDialog.SelectedPath = lastPath;
-                    folderDialog.ShowNewFolderButton = false;
-                    DialogResult result = folderDialog.ShowDialog();
-                    if (result == DialogResult.OK) {
-                        Form1_KeyUp(sender, new KeyEventArgs(Keys.Shift));
-                        string[] imageExtensions = { ".jpg", ".png", ".bmp" };
-                        string selectedPath = folderDialog.SelectedPath;
-                        if (checkBox1.Checked) {
-                            listBox1.Items.Clear();
-                        }
-                        if (!loadedFolders.Contains(selectedPath)) {
-                            Properties.Settings.Default.LastFolderPath = selectedPath;
-                            Properties.Settings.Default.Save();
-
-                            // Loop through the files in the selected folder
-                            bool loopCompleted = true;
-                            foreach (string imagePath in Directory.GetFiles(selectedPath)
-                                .Where(f => imageExtensions.Contains(Path.GetExtension(f).ToLower()))) {
-                                // Check if the same file path is already in the list box
-                                if (listBox1.Items.Cast<ListItem>().Any(items => items.Value == imagePath)) {
-                                    // If the file path is already in the list box, stop the loop
-                                    loopCompleted = false;
-                                    break;
-                                }
-                                // Create a new ListItem object
-                                string fileName = Path.GetFileName(imagePath);
-                                ListItem item = new ListItem(fileName, imagePath);
-                                // Add the new item to the list box on the UI thread
-                                _ = listBox1.Invoke(new Action(() => {
-                                    _ = listBox1.Items.Add(item);
-                                }));
-                            }
-
-                            // Check if the loop completed successfully
-                            if (loopCompleted) {
-                                // Add the folder path to the HashSet
-                                loadedFolders.Add(selectedPath);
-                            }
-                        }
-
-                        // Update the list box without reloading the images if the loop completed successfully
-                        if (loadedFolders.Contains(selectedPath)) {
-                            Form1_KeyUp(sender, new KeyEventArgs(Keys.Shift));
-                            foreach (string imagePath in Directory.GetFiles(selectedPath)
-                                .Where(f => imageExtensions.Contains(Path.GetExtension(f).ToLower()))) {
-                                if (listBox1.Items.Cast<ListItem>().Any(items => items.Value == imagePath)) {
-                                    continue;
-                                }
-                                string fileName = Path.GetFileName(imagePath);
-                                ListItem item = new ListItem(fileName, imagePath);
-                                _ = listBox1.Invoke(new Action(() => {
-                                    _ = listBox1.Items.Add(item);
-                                }));
-                            }
-                        }
-
-                        button4.Enabled = listBox1.Items.Count > 0;
+                using FolderBrowserDialog folderDialog = new();
+                folderDialog.SelectedPath = lastPath;
+                folderDialog.ShowNewFolderButton = false;
+                DialogResult result = folderDialog.ShowDialog();
+                if (result == DialogResult.OK) {
+                    Form1_KeyUp(sender, new KeyEventArgs(Keys.Shift));
+                    string[] imageExtensions = { ".jpg", ".png", ".bmp" };
+                    string selectedPath = folderDialog.SelectedPath;
+                    if (checkBox1.Checked) {
+                        listBox1.Items.Clear();
                     }
+                    if (!loadedFolders.Contains(selectedPath)) {
+                        Properties.Settings.Default.LastFolderPath = selectedPath;
+                        Properties.Settings.Default.Save();
+
+                        // Loop through the files in the selected folder
+                        bool loopCompleted = true;
+                        foreach (string imagePath in Directory.GetFiles(selectedPath)
+                            .Where(f => imageExtensions.Contains(Path.GetExtension(f).ToLower()))) {
+                            // Check if the same file path is already in the list box
+                            if (listBox1.Items.Cast<ListItem>().Any(items => items.Value == imagePath)) {
+                                // If the file path is already in the list box, stop the loop
+                                loopCompleted = false;
+                                break;
+                            }
+                            // Create a new ListItem object
+                            string fileName = Path.GetFileName(imagePath);
+                            ListItem item = new(fileName, imagePath);
+                            // Add the new item to the list box on the UI thread
+                            listBox1.Invoke(new Action(() => {
+                                listBox1.Items.Add(item);
+                            }));
+                        }
+
+                        // Check if the loop completed successfully
+                        if (loopCompleted) {
+                            // Add the folder path to the HashSet
+                            _ = loadedFolders.Add(selectedPath);
+                        }
+                    }
+
+                    // Update the list box without reloading the images if the loop completed successfully
+                    if (loadedFolders.Contains(selectedPath)) {
+                        Form1_KeyUp(sender, new KeyEventArgs(Keys.Shift));
+                        foreach (string imagePath in Directory.GetFiles(selectedPath)
+                            .Where(f => imageExtensions.Contains(Path.GetExtension(f).ToLower()))) {
+                            if (listBox1.Items.Cast<ListItem>().Any(items => items.Value == imagePath)) {
+                                continue;
+                            }
+                            string fileName = Path.GetFileName(imagePath);
+                            ListItem item = new(fileName, imagePath);
+                            listBox1.Invoke(new Action(() => {
+                                listBox1.Items.Add(item);
+                            }));
+                        }
+                    }
+
+                    button4.Enabled = listBox1.Items.Count > 0;
                 }
             }
         }
@@ -199,16 +200,15 @@ namespace ImageSorter {
         private void Button2_Click(object sender, EventArgs e) {
             string lastOutputPath = Properties.Settings.Default.LastOutputPath;
 
-            using (FolderBrowserDialog folderDialog = new FolderBrowserDialog()) {
-                folderDialog.SelectedPath = lastOutputPath;
-                folderDialog.ShowNewFolderButton = true;
+            using FolderBrowserDialog folderDialog = new();
+            folderDialog.SelectedPath = lastOutputPath;
+            folderDialog.ShowNewFolderButton = true;
 
-                DialogResult result = folderDialog.ShowDialog();
-                if (result == DialogResult.OK) {
-                    string selectedPath = folderDialog.SelectedPath;
-                    Properties.Settings.Default.LastOutputPath = selectedPath;
-                    Properties.Settings.Default.Save();
-                }
+            DialogResult result = folderDialog.ShowDialog();
+            if (result == DialogResult.OK) {
+                string selectedPath = folderDialog.SelectedPath;
+                Properties.Settings.Default.LastOutputPath = selectedPath;
+                Properties.Settings.Default.Save();
             }
         }
 
@@ -259,7 +259,7 @@ namespace ImageSorter {
                 if (shiftKeyPressed) {
                     listBox1.MoveSelectedItemDown(true);
                 }
-                else { 
+                else {
                     listBox1.MoveSelectedItemDown(false);
                 };
             }
@@ -370,10 +370,10 @@ namespace ImageSorter {
                 }
 
                 else if (selectedIndex >= 0) {
-                        object selectedItem = listBox.SelectedItem;
-                        listBox.Items.RemoveAt(selectedIndex);
-                        listBox.Items.Insert(selectedIndex - 1, selectedItem); // move the item up by one position
-                        listBox.SetSelected(selectedIndex - 1, true); // select the moved item
+                    object selectedItem = listBox.SelectedItem;
+                    listBox.Items.RemoveAt(selectedIndex);
+                    listBox.Items.Insert(selectedIndex - 1, selectedItem); // move the item up by one position
+                    listBox.SetSelected(selectedIndex - 1, true); // select the moved item
                 }
 
             }
