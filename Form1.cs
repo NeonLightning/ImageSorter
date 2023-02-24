@@ -15,15 +15,13 @@ namespace ImageSorter {
         private Lazy<Image> lazyImage;
 #pragma warning disable IDE0044 // Add readonly modifier
         private HashSet<string> loadedFolders = new HashSet<string>();
-        bool move = false;
-        bool delete = false;
+        private bool move = false;
 #pragma warning restore IDE0044 // Add readonly modifier
-
 
         public MainForm() {
             InitializeComponent();
-            this.KeyDown += new KeyEventHandler(Form1_KeyDown);
-            this.KeyUp += new KeyEventHandler(Form1_KeyUp);
+            KeyDown += new KeyEventHandler(Form1_KeyDown);
+            KeyUp += new KeyEventHandler(Form1_KeyUp);
             listBox1.MouseDown += ListBox1_MouseDown;
             listBox1.MouseMove += ListBox1_MouseMove;
             listBox1.MouseUp += ListBox1_MouseUp;
@@ -36,8 +34,8 @@ namespace ImageSorter {
         private void UpdateMoveButtonsEnabled(ListBox listBox) {
             if (listBox.SelectedItem != null && listBox.Items.Count > 1) {
                 int selectedIndex = listBox.SelectedIndex;
-                button5.Enabled = (selectedIndex < listBox.Items.Count - 1);
-                button6.Enabled = (selectedIndex > 0);
+                button5.Enabled = selectedIndex < listBox.Items.Count - 1;
+                button6.Enabled = selectedIndex > 0;
             }
             else {
                 button5.Enabled = false;
@@ -62,11 +60,13 @@ namespace ImageSorter {
                         pictureBox1.Image.Dispose();
                         pictureBox1.Image = null;
                         pictureBox1.Image = Resources.imagesorterpreview;
+                        selectedFile = ((ListItem)listBox1.SelectedItem).Value;
                         File.Delete(selectedFile);
                         listBox1.Items.Remove(listBox1.SelectedItem);
+                        Text = "Image Sorter";
                     }
                     catch (Exception ex) {
-                        MessageBox.Show($"Error deleting file {selectedFile}: {ex.Message}");
+                        _ = MessageBox.Show($"Error deleting file {selectedFile}: {ex.Message}");
                         return;
                     }
                 }
@@ -76,7 +76,7 @@ namespace ImageSorter {
                 pictureBox1.Image.Dispose();
                 pictureBox1.Image = null;
                 pictureBox1.Image = Resources.imagesorterpreview;
-                this.Text = "Image Sorter";
+                Text = "Image Sorter";
                 listBox1.Items.Remove(listBox1.SelectedItem);
             }
             UpdateMoveButtonsEnabled(listBox1);
@@ -110,54 +110,74 @@ namespace ImageSorter {
 
         private void Button1_Click(object sender, EventArgs e) {
             // Check if the Shift key is pressed
+            string lastPath = Properties.Settings.Default.LastFolderPath;
             if (Control.ModifierKeys == Keys.Shift) {
-                // Show the OpenFileDialog
-                string lastPath = Properties.Settings.Default.LastFolderPath;
                 using (OpenFileDialog openFileDialog = new OpenFileDialog()) {
                     openFileDialog.RestoreDirectory = true;
                     openFileDialog.Filter = "Image files (.jpg, .png, .bmp)|*.jpg;*.png;*.bmp";
                     DialogResult result = openFileDialog.ShowDialog();
                     if (result == DialogResult.OK) {
+                        Form1_KeyUp(sender, new KeyEventArgs(Keys.Shift));
                         string filePath = openFileDialog.FileName;
+                        if (listBox1.Items.Cast<ListItem>().Any(items => items.Value == filePath)) {
+                            MessageBox.Show($"The file {filePath} is already in the list.");
+                            return;
+                        }
                         string fileName = Path.GetFileName(filePath);
-                        var item = new ListItem(fileName, filePath);
-                        listBox1.Items.Add(item);
+                        ListItem item = new ListItem(fileName, filePath);
+                        _ = listBox1.Items.Add(item);
                     }
                 }
             }
             else {
                 // Show the FolderBrowserDialog
-                string lastPath = Properties.Settings.Default.LastFolderPath;
+                lastPath = Properties.Settings.Default.LastFolderPath;
                 using (FolderBrowserDialog folderDialog = new FolderBrowserDialog()) {
                     folderDialog.SelectedPath = lastPath;
                     folderDialog.ShowNewFolderButton = false;
                     DialogResult result = folderDialog.ShowDialog();
                     if (result == DialogResult.OK) {
+                        Form1_KeyUp(sender, new KeyEventArgs(Keys.Shift));
                         string[] imageExtensions = { ".jpg", ".png", ".bmp" };
                         string selectedPath = folderDialog.SelectedPath;
                         if (!loadedFolders.Contains(selectedPath)) {
                             Properties.Settings.Default.LastFolderPath = selectedPath;
                             Properties.Settings.Default.Save();
                             listBox1.Items.Clear();
-                            Parallel.ForEach(Directory.GetFiles(selectedPath)
+                            _ = Parallel.ForEach(Directory.GetFiles(selectedPath)
                                 .Where(f => imageExtensions.Contains(Path.GetExtension(f).ToLower())),
                                 new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount - 1 }, filePath => {
+                                    if (listBox1.Items.Cast<ListItem>().Any(items => items.Value == filePath)) {
+                                        return;
+                                    }
                                     string fileName = Path.GetFileName(filePath);
                                     // Create a new ListItem object
-                                    var item = new ListItem(fileName, filePath);
+                                    ListItem item = new ListItem(fileName, filePath);
                                     // Add the new item to the list box on the UI thread
-                                    listBox1.Invoke(new Action(() => {
-                                        listBox1.Items.Add(item);
+                                    _ = listBox1.Invoke(new Action(() => {
+                                        _ = listBox1.Items.Add(item);
                                     }));
                                 });
-
-                        }
-                        if (listBox1.Items.Count > 0) {
-                            button4.Enabled = true;
+                            // Add the folder path to the HashSet
+                            _ = loadedFolders.Add(selectedPath);
                         }
                         else {
-                            button4.Enabled = false;
+                            Form1_KeyUp(sender, new KeyEventArgs(Keys.Shift));
+                            // Update the list box without reloading the images
+                            foreach (string imagePath in Directory.GetFiles(selectedPath)
+                                .Where(f => imageExtensions.Contains(Path.GetExtension(f).ToLower()))) {
+                                if (listBox1.Items.Cast<ListItem>().Any(items => items.Value == imagePath)) {
+                                    continue;
+                                }
+                                string fileName = Path.GetFileName(imagePath);
+                                ListItem item = new ListItem(fileName, imagePath);
+                                _ = listBox1.Invoke(new Action(() => {
+                                    _ = listBox1.Items.Add(item);
+                                }));
+                            }
                         }
+
+                        button4.Enabled = listBox1.Items.Count > 0;
                     }
                 }
             }
@@ -189,12 +209,12 @@ namespace ImageSorter {
                 int targetIndex = listBox1.IndexFromPoint(e.Location);
 
                 if (targetIndex != -1 && targetIndex != _sourceIndex) {
-                        if (listBox1.Items.Count > 1) {
-                            object selectedItem = listBox1.Items[_sourceIndex];
-                            listBox1.Items.RemoveAt(_sourceIndex);
-                            listBox1.Items.Insert(targetIndex, selectedItem);
-                            _sourceIndex = targetIndex;
-                        }
+                    if (listBox1.Items.Count > 1) {
+                        object selectedItem = listBox1.Items[_sourceIndex];
+                        listBox1.Items.RemoveAt(_sourceIndex);
+                        listBox1.Items.Insert(targetIndex, selectedItem);
+                        _sourceIndex = targetIndex;
+                    }
                 }
             }
         }
@@ -223,7 +243,7 @@ namespace ImageSorter {
             }
             UpdateMoveButtonsEnabled(listBox1);
             if (listBox1.SelectedItem != null) {
-                    pictureBox1.Image = lazyImage.Value;
+                pictureBox1.Image = lazyImage.Value;
             }
         }
 
@@ -236,8 +256,8 @@ namespace ImageSorter {
                 ListItem selectedItem = (ListItem)listBox1.SelectedItem;
                 string selectedImagePath = selectedItem.Value;
                 string selectedFileName = selectedItem.Text;
-                this.Name = selectedFileName;
-                this.Text = selectedFileName;
+                Name = selectedFileName;
+                Text = selectedFileName;
                 lazyImage = new Lazy<Image>(() => Image.FromFile(selectedImagePath));
                 pictureBox1.Image = lazyImage.Value;
             }
@@ -246,20 +266,20 @@ namespace ImageSorter {
         private void Button4_Click(object sender, EventArgs e) {
             // Create the destination folder
             string destinationFolder = Properties.Settings.Default.LastOutputPath;
-            Directory.CreateDirectory(destinationFolder);
+            _ = Directory.CreateDirectory(destinationFolder);
 
             // Loop through the files in the list box and move or copy them to the destination folder
             for (int i = 0; i < listBox1.Items.Count; i++) {
                 string sourceFile = listBox1.Items[i].ToString();
                 string extension = Path.GetExtension(sourceFile);
-                string destinationFile = Path.Combine(destinationFolder, $"image{(i + 1).ToString("000")}{extension}");
+                string destinationFile = Path.Combine(destinationFolder, $"image{i + 1:000}{extension}");
                 if (File.Exists(sourceFile)) {
                     try {
                         if (move) {
                             pictureBox1.Image.Dispose();
                             pictureBox1.Image = null;
                             pictureBox1.Image = Resources.imagesorterpreview;
-                            this.Text = "Image Sorter";
+                            Text = "Image Sorter";
                             File.Move(sourceFile, destinationFile);
                         }
                         else {
@@ -267,44 +287,42 @@ namespace ImageSorter {
                         }
                     }
                     catch (Exception ex) {
-                        MessageBox.Show($"Error {(move ? "moving" : "copying")} file {sourceFile}: {ex.Message}");
+                        _ = MessageBox.Show($"Error {(move ? "moving" : "copying")} file {sourceFile}: {ex.Message}");
                     }
                 }
                 else {
-                    MessageBox.Show($"File {sourceFile} does not exist");
+                    _ = MessageBox.Show($"File {sourceFile} does not exist");
                 }
             }
             if (move) { listBox1.Items.Clear(); }
+            Form1_KeyUp(sender, new KeyEventArgs(Keys.Shift));
 
-            MessageBox.Show("Done");
+            _ = MessageBox.Show("Done");
             pictureBox1.Image.Dispose();
             pictureBox1.Image = null;
             pictureBox1.Image = Resources.imagesorterpreview;
-            this.Text = "Image Sorter";
+            Text = "Image Sorter";
         }
         private void Button3_Click(object sender, EventArgs e) {
-            // Get the selected index in the ListBox
-            int selectedIndex = listBox1.SelectedIndex;
-
-            if (selectedIndex == -1) return;
-
             string selectedFile = listBox1.SelectedItem.ToString();
-
-            if (delete) {
+            bool shiftKeyPressed = Control.ModifierKeys == Keys.Shift;
+            if (shiftKeyPressed) {
                 if (listBox1.SelectedItem != null) {
-                    //pictureBox1.Image = lazyImage.Value;
                     pictureBox1.Image.Dispose();
                     pictureBox1.Image = null;
                     pictureBox1.Image = Resources.imagesorterpreview;
-                    this.Text = "Image Sorter";
+                    Text = "Image Sorter";
                 }
                 try {
+                    selectedFile = ((ListItem)listBox1.SelectedItem).Value;
+                    _ = MessageBox.Show($"deleting file {selectedFile}");
                     File.Delete(selectedFile);
+                    Form1_KeyUp(sender, new KeyEventArgs(Keys.Shift));
                     listBox1.Items.Remove(listBox1.SelectedItem);
-                    this.Text = "Image Sorter";
+                    Text = "Image Sorter";
                 }
                 catch (Exception ex) {
-                    MessageBox.Show($"Error deleting file {selectedFile}: {ex.Message}");
+                    _ = MessageBox.Show($"Error deleting file {selectedFile}: {ex.Message}");
                     return;
                 }
             }
@@ -314,9 +332,6 @@ namespace ImageSorter {
 
         }
     }
-
-
-
 
     public static class ListBoxExtension {
         public static void MoveSelectedItemUp(this ListBox listBox, bool shiftKeyPressed) {
