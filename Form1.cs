@@ -8,57 +8,12 @@ using System.Linq;
 using System.Windows.Forms;
 
 namespace ImageSorter {
-    public static class ListBoxExtension {
-        public static void MoveSelectedItemDown(this ListBox listBox, bool shiftKeyPressed) {
-            if (listBox.SelectedItem != null) {
-                int selectedIndex = listBox.SelectedIndex;
-                if (selectedIndex >= 0 && shiftKeyPressed) {
-                    int lastIndex = listBox.Items.Count - 1; // get the index of the last item
-                    if (selectedIndex < lastIndex) { // check if not already at the bottom
-                        object selectedItem = listBox.SelectedItem;
-                        listBox.Items.RemoveAt(selectedIndex);
-                        listBox.Items.Insert(lastIndex, selectedItem); // insert at the bottom
-                        listBox.SetSelected(lastIndex, true); // select the moved item
-                    }
-                }
-                else if (selectedIndex >= 0) {
-                    int lastIndex = listBox.Items.Count - 1; // get the index of the last item
-                    if (selectedIndex < lastIndex) { // check if not already at the bottom
-                        object selectedItem = listBox.SelectedItem;
-                        listBox.Items.RemoveAt(selectedIndex);
-                        listBox.Items.Insert(selectedIndex + 1, selectedItem); // move the item down by one position
-                        listBox.SetSelected(selectedIndex + 1, true); // select the moved item
-                    }
-                }
-            }
-        }
-
-        public static void MoveSelectedItemUp(this ListBox listBox, bool shiftKeyPressed) {
-            if (listBox.SelectedItem != null) {
-                int selectedIndex = listBox.SelectedIndex;
-                if (selectedIndex >= 0 && shiftKeyPressed) {
-                    object selectedItem = listBox.SelectedItem;
-                    listBox.Items.RemoveAt(selectedIndex);
-                    listBox.Items.Insert(0, selectedItem); // insert at the top
-                    listBox.SetSelected(0, true); // select the moved item
-                }
-
-                else if (selectedIndex >= 0) {
-                    object selectedItem = listBox.SelectedItem;
-                    listBox.Items.RemoveAt(selectedIndex);
-                    listBox.Items.Insert(selectedIndex - 1, selectedItem); // move the item up by one position
-                    listBox.SetSelected(selectedIndex - 1, true); // select the moved item
-                }
-
-            }
-        }
-    }
-
+    
     public partial class MainForm : Form {
         private Point _dragStartPoint;
         private int _sourceIndex = -1;
-        private Lazy<Image> lazyImage;
         private HashSet<string> loadedFolders = new();
+        private Lazy<Image> lazyImage;
         private bool move = false;
 
         public MainForm() {
@@ -401,4 +356,61 @@ namespace ImageSorter {
             }
         }
     }
+    public static class ListBoxExtension
+    {
+        public static void MoveSelectedItemDown(this ListBox listBox, bool shiftKeyPressed)
+        {
+            if (listBox.SelectedItem != null)
+            {
+                int selectedIndex = listBox.SelectedIndex;
+                if (selectedIndex >= 0 && shiftKeyPressed)
+                {
+                    int lastIndex = listBox.Items.Count - 1; // get the index of the last item
+                    if (selectedIndex < lastIndex)
+                    { // check if not already at the bottom
+                        object selectedItem = listBox.SelectedItem;
+                        listBox.Items.RemoveAt(selectedIndex);
+                        listBox.Items.Insert(lastIndex, selectedItem); // insert at the bottom
+                        listBox.SetSelected(lastIndex, true); // select the moved item
+                    }
+                }
+                else if (selectedIndex >= 0)
+                {
+                    int lastIndex = listBox.Items.Count - 1; // get the index of the last item
+                    if (selectedIndex < lastIndex)
+                    { // check if not already at the bottom
+                        object selectedItem = listBox.SelectedItem;
+                        listBox.Items.RemoveAt(selectedIndex);
+                        listBox.Items.Insert(selectedIndex + 1, selectedItem); // move the item down by one position
+                        listBox.SetSelected(selectedIndex + 1, true); // select the moved item
+                    }
+                }
+            }
+        }
+
+        public static void MoveSelectedItemUp(this ListBox listBox, bool shiftKeyPressed)
+        {
+            if (listBox.SelectedItem != null)
+            {
+                int selectedIndex = listBox.SelectedIndex;
+                if (selectedIndex >= 0 && shiftKeyPressed)
+                {
+                    object selectedItem = listBox.SelectedItem;
+                    listBox.Items.RemoveAt(selectedIndex);
+                    listBox.Items.Insert(0, selectedItem); // insert at the top
+                    listBox.SetSelected(0, true); // select the moved item
+                }
+
+                else if (selectedIndex >= 0)
+                {
+                    object selectedItem = listBox.SelectedItem;
+                    listBox.Items.RemoveAt(selectedIndex);
+                    listBox.Items.Insert(selectedIndex - 1, selectedItem); // move the item up by one position
+                    listBox.SetSelected(selectedIndex - 1, true); // select the moved item
+                }
+
+            }
+        }
+    }
+
 }
