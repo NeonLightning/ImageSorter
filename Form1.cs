@@ -8,14 +8,58 @@ using System.Linq;
 using System.Windows.Forms;
 
 namespace ImageSorter {
+    public static class ListBoxExtension {
+        public static void MoveSelectedItemDown(this ListBox listBox, bool shiftKeyPressed) {
+            if (listBox.SelectedItem != null) {
+                int selectedIndex = listBox.SelectedIndex;
+                if (selectedIndex >= 0 && shiftKeyPressed) {
+                    int lastIndex = listBox.Items.Count - 1; // get the index of the last item
+                    if (selectedIndex < lastIndex) { // check if not already at the bottom
+                        object selectedItem = listBox.SelectedItem;
+                        listBox.Items.RemoveAt(selectedIndex);
+                        listBox.Items.Insert(lastIndex, selectedItem); // insert at the bottom
+                        listBox.SetSelected(lastIndex, true); // select the moved item
+                    }
+                }
+                else if (selectedIndex >= 0) {
+                    int lastIndex = listBox.Items.Count - 1; // get the index of the last item
+                    if (selectedIndex < lastIndex) { // check if not already at the bottom
+                        object selectedItem = listBox.SelectedItem;
+                        listBox.Items.RemoveAt(selectedIndex);
+                        listBox.Items.Insert(selectedIndex + 1, selectedItem); // move the item down by one position
+                        listBox.SetSelected(selectedIndex + 1, true); // select the moved item
+                    }
+                }
+            }
+        }
+
+        public static void MoveSelectedItemUp(this ListBox listBox, bool shiftKeyPressed) {
+            if (listBox.SelectedItem != null) {
+                int selectedIndex = listBox.SelectedIndex;
+                if (selectedIndex >= 0 && shiftKeyPressed) {
+                    object selectedItem = listBox.SelectedItem;
+                    listBox.Items.RemoveAt(selectedIndex);
+                    listBox.Items.Insert(0, selectedItem); // insert at the top
+                    listBox.SetSelected(0, true); // select the moved item
+                }
+
+                else if (selectedIndex >= 0) {
+                    object selectedItem = listBox.SelectedItem;
+                    listBox.Items.RemoveAt(selectedIndex);
+                    listBox.Items.Insert(selectedIndex - 1, selectedItem); // move the item up by one position
+                    listBox.SetSelected(selectedIndex - 1, true); // select the moved item
+                }
+
+            }
+        }
+    }
+
     public partial class MainForm : Form {
         private Point _dragStartPoint;
         private int _sourceIndex = -1;
         private Lazy<Image> lazyImage;
-#pragma warning disable IDE0044 // Add readonly modifier
         private HashSet<string> loadedFolders = new();
         private bool move = false;
-#pragma warning restore IDE0044 // Add readonly modifier
 
         public MainForm() {
             InitializeComponent();
@@ -28,88 +72,6 @@ namespace ImageSorter {
                 string selectedImagePath = (string)listBox1.SelectedItem;
                 return Image.FromFile(selectedImagePath);
             });
-        }
-
-        private void UpdateMoveButtonsEnabled(ListBox listBox) {
-            if (listBox.SelectedItem != null && listBox.Items.Count > 1) {
-                int selectedIndex = listBox.SelectedIndex;
-                button5.Enabled = selectedIndex > 0;
-                button6.Enabled = selectedIndex < listBox.Items.Count - 1;
-            }
-            else {
-                button5.Enabled = false;
-                button6.Enabled = false;
-            }
-        }
-
-        private void Form1_KeyDown(object sender, KeyEventArgs e) {
-            // Check if Shift key is held down
-            if (e.Shift) {
-                // Change button text to "Input File"
-                button1.Text = "Input File";
-                button3.Text = "Delete";
-                button4.Text = "Move";
-                button5.Text = "Top";
-                button6.Text = "Bottom";
-            }
-            if (e.KeyCode == Keys.Delete && listBox1.SelectedIndex != -1) {
-               
-                string selectedFile = listBox1.SelectedItem.ToString();
-                //bool shiftKeyPressed = Control.ModifierKeys == Keys.Shift;
-                if (e.Shift || e.KeyCode == Keys.Delete) { 
-                   //if (shiftKeyPressed) {
-                    if (listBox1.SelectedItem != null) {
-                        pictureBox1.Image.Dispose();
-                        pictureBox1.Image = null;
-                        pictureBox1.Image = Resources.imagesorterpreview;
-                        Text = "Image Sorter";
-                    }
-                    try {
-                        selectedFile = ((ListItem)listBox1.SelectedItem).Value;
-                        _ = MessageBox.Show($"deleting file {selectedFile}");
-                        using (FileStream fs = new FileStream(selectedFile, FileMode.Open, FileAccess.ReadWrite, FileShare.None)) {
-                            fs.Close();
-                        }
-                        File.Delete(selectedFile);
-                        listBox1.Items.Remove(listBox1.SelectedItem);
-                        Text = "Image Sorter";
-                    }
-                    catch (Exception ex) {
-                        _ = MessageBox.Show($"Error deleting file {selectedFile}: {ex.Message}");
-                        return;
-                    }
-                }
-                else {
-                    listBox1.Items.Remove(listBox1.SelectedItem);
-                }
-            }
-            UpdateMoveButtonsEnabled(listBox1);
-        }
-
-        private void Form1_KeyUp(object sender, KeyEventArgs e) {
-            // Check if Shift key was released
-            if (e.KeyCode == Keys.ShiftKey) {
-                // Change button text back to original text
-                button1.Text = "Input Folder";
-                button3.Text = "Remove";
-                button4.Text = "Copy";
-                button5.Text = "Move Up";
-                button6.Text = "Move Down";
-            }
-        }
-
-        public class ListItem {
-            public string Text { get; set; }
-            public string Value { get; set; }
-
-            public ListItem(string text, string value) {
-                Text = text;
-                Value = value;
-            }
-
-            public override string ToString() {
-                return Text;
-            }
         }
 
         private void Button1_Click(object sender, EventArgs e) {
@@ -212,80 +174,33 @@ namespace ImageSorter {
             }
         }
 
-        private void ListBox1_MouseUp(object sender, MouseEventArgs e) {
-            _sourceIndex = -1;
-        }
-
-        private void ListBox1_MouseMove(object sender, MouseEventArgs e) {
-            if (e.Button == MouseButtons.Left) {
-
-                int targetIndex = listBox1.IndexFromPoint(e.Location);
-
-                if (targetIndex != -1 && targetIndex != _sourceIndex) {
-                    if (listBox1.Items.Count > 1) {
-                        object selectedItem = listBox1.Items[_sourceIndex];
-                        listBox1.Items.RemoveAt(_sourceIndex);
-                        listBox1.Items.Insert(targetIndex, selectedItem);
-                        _sourceIndex = targetIndex;
-                    }
-                }
-            }
-        }
-        private void ListBox1_MouseDown(object sender, MouseEventArgs e) {
-            _dragStartPoint = new Point(e.X, e.Y);
-            _sourceIndex = listBox1.IndexFromPoint(_dragStartPoint);
-        }
-
-        private void Button5_Click(object sender, EventArgs e) {
-            if (listBox1.SelectedItem != null) {
-                bool shiftKeyPressed = Control.ModifierKeys == Keys.Shift;
-                if (shiftKeyPressed) {
-                    listBox1.MoveSelectedItemUp(true);
-                }
-                else {
-                    listBox1.MoveSelectedItemUp(false);
-                };
-            }
-            UpdateMoveButtonsEnabled(listBox1);
-            if (listBox1.SelectedItem != null) {
-                pictureBox1.Image = lazyImage.Value;
-            }
-        }
-
-        private void Button6_Click(object sender, EventArgs e) {
-
-            if (listBox1.SelectedItem != null) {
-                bool shiftKeyPressed = Control.ModifierKeys == Keys.Shift;
-                if (shiftKeyPressed) {
-                    listBox1.MoveSelectedItemDown(true);
-                }
-                else {
-                    listBox1.MoveSelectedItemDown(false);
-                };
-            }
-            UpdateMoveButtonsEnabled(listBox1);
-            if (listBox1.SelectedItem != null) {
+        private void Button3_Click(object sender, EventArgs e) {
+            string selectedFile = listBox1.SelectedItem.ToString();
+            bool shiftKeyPressed = Control.ModifierKeys == Keys.Shift;
+            if (shiftKeyPressed) {
+                Form1_KeyUp(sender, new KeyEventArgs(Keys.Shift));
                 if (listBox1.SelectedItem != null) {
-                    pictureBox1.Image = lazyImage.Value;
+                    pictureBox1.Image.Dispose();
+                    pictureBox1.Image = null;
+                    pictureBox1.Image = Resources.imagesorterpreview;
+                    Text = "Image Sorter";
+                }
+                try {
+                    selectedFile = ((ListItem)listBox1.SelectedItem).Value;
+                    _ = MessageBox.Show($"deleting file {selectedFile}");
+                    File.Delete(selectedFile);
+                    listBox1.Items.Remove(listBox1.SelectedItem);
+                    Text = "Image Sorter";
+                }
+                catch (Exception ex) {
+                    _ = MessageBox.Show($"Error deleting file {selectedFile}: {ex.Message}");
+                    return;
                 }
             }
-
-        }
-
-        private void ListBox1_SelectedIndexChanged(object sender, EventArgs e) {
-            UpdateMoveButtonsEnabled(listBox1); if (listBox1.SelectedItem != null) {
-                button3.Enabled = true;
+            else {
+                listBox1.Items.Remove(listBox1.SelectedItem);
             }
-            // Get the selected item from the list box
-            if (pictureBox1 != null && listBox1.SelectedItem != null) {
-                ListItem selectedItem = (ListItem)listBox1.SelectedItem;
-                string selectedImagePath = selectedItem.Value;
-                string selectedFileName = selectedItem.Text;
-                Name = selectedFileName;
-                Text = selectedFileName;
-                lazyImage = new Lazy<Image>(() => Image.FromFile(selectedImagePath));
-                pictureBox1.Image = lazyImage.Value;
-            }
+
         }
 
         private void Button4_Click(object sender, EventArgs e) {
@@ -328,78 +243,161 @@ namespace ImageSorter {
             pictureBox1.Image = Resources.imagesorterpreview;
             Text = "Image Sorter";
         }
-        private void Button3_Click(object sender, EventArgs e) {
-            string selectedFile = listBox1.SelectedItem.ToString();
-            bool shiftKeyPressed = Control.ModifierKeys == Keys.Shift;
-            if (shiftKeyPressed) {
-                Form1_KeyUp(sender, new KeyEventArgs(Keys.Shift));
+
+        private void Button5_Click(object sender, EventArgs e) {
+            if (listBox1.SelectedItem != null) {
+                bool shiftKeyPressed = Control.ModifierKeys == Keys.Shift;
+                if (shiftKeyPressed) {
+                    listBox1.MoveSelectedItemUp(true);
+                }
+                else {
+                    listBox1.MoveSelectedItemUp(false);
+                };
+            }
+            UpdateMoveButtonsEnabled(listBox1);
+            if (listBox1.SelectedItem != null) {
+                pictureBox1.Image = lazyImage.Value;
+            }
+        }
+
+        private void Button6_Click(object sender, EventArgs e) {
+
+            if (listBox1.SelectedItem != null) {
+                bool shiftKeyPressed = Control.ModifierKeys == Keys.Shift;
+                if (shiftKeyPressed) {
+                    listBox1.MoveSelectedItemDown(true);
+                }
+                else {
+                    listBox1.MoveSelectedItemDown(false);
+                };
+            }
+            UpdateMoveButtonsEnabled(listBox1);
+            if (listBox1.SelectedItem != null) {
                 if (listBox1.SelectedItem != null) {
-                    pictureBox1.Image.Dispose();
-                    pictureBox1.Image = null;
-                    pictureBox1.Image = Resources.imagesorterpreview;
-                    Text = "Image Sorter";
+                    pictureBox1.Image = lazyImage.Value;
                 }
-                try {
-                    selectedFile = ((ListItem)listBox1.SelectedItem).Value;
-                    _ = MessageBox.Show($"deleting file {selectedFile}");
-                    File.Delete(selectedFile);
+            }
+
+        }
+
+        private void Form1_KeyDown(object sender, KeyEventArgs e) {
+            // Check if Shift key is held down
+            if (e.Shift) {
+                // Change button text to "Input File"
+                button1.Text = "Input File";
+                button3.Text = "Delete";
+                button4.Text = "Move";
+                button5.Text = "Top";
+                button6.Text = "Bottom";
+            }
+            if (e.KeyCode == Keys.Delete && listBox1.SelectedIndex != -1) {
+
+                string selectedFile = listBox1.SelectedItem.ToString();
+                //bool shiftKeyPressed = Control.ModifierKeys == Keys.Shift;
+                if (e.Shift || e.KeyCode == Keys.Delete) {
+                    //if (shiftKeyPressed) {
+                    if (listBox1.SelectedItem != null) {
+                        pictureBox1.Image.Dispose();
+                        pictureBox1.Image = null;
+                        pictureBox1.Image = Resources.imagesorterpreview;
+                        Text = "Image Sorter";
+                    }
+                    try {
+                        selectedFile = ((ListItem)listBox1.SelectedItem).Value;
+                        _ = MessageBox.Show($"deleting file {selectedFile}");
+                        using (FileStream fs = new FileStream(selectedFile, FileMode.Open, FileAccess.ReadWrite, FileShare.None)) {
+                            fs.Close();
+                        }
+                        File.Delete(selectedFile);
+                        listBox1.Items.Remove(listBox1.SelectedItem);
+                        Text = "Image Sorter";
+                    }
+                    catch (Exception ex) {
+                        _ = MessageBox.Show($"Error deleting file {selectedFile}: {ex.Message}");
+                        return;
+                    }
+                }
+                else {
                     listBox1.Items.Remove(listBox1.SelectedItem);
-                    Text = "Image Sorter";
                 }
-                catch (Exception ex) {
-                    _ = MessageBox.Show($"Error deleting file {selectedFile}: {ex.Message}");
-                    return;
+            }
+            UpdateMoveButtonsEnabled(listBox1);
+        }
+
+        private void Form1_KeyUp(object sender, KeyEventArgs e) {
+            // Check if Shift key was released
+            if (e.KeyCode == Keys.ShiftKey) {
+                // Change button text back to original text
+                button1.Text = "Input Folder";
+                button3.Text = "Remove";
+                button4.Text = "Copy";
+                button5.Text = "Move Up";
+                button6.Text = "Move Down";
+            }
+        }
+
+        private void ListBox1_MouseDown(object sender, MouseEventArgs e) {
+            _dragStartPoint = new Point(e.X, e.Y);
+            _sourceIndex = listBox1.IndexFromPoint(_dragStartPoint);
+        }
+
+        private void ListBox1_MouseMove(object sender, MouseEventArgs e) {
+            if (e.Button == MouseButtons.Left) {
+
+                int targetIndex = listBox1.IndexFromPoint(e.Location);
+
+                if (targetIndex != -1 && targetIndex != _sourceIndex) {
+                    if (listBox1.Items.Count > 1) {
+                        object selectedItem = listBox1.Items[_sourceIndex];
+                        listBox1.Items.RemoveAt(_sourceIndex);
+                        listBox1.Items.Insert(targetIndex, selectedItem);
+                        _sourceIndex = targetIndex;
+                    }
                 }
+            }
+        }
+
+        private void ListBox1_MouseUp(object sender, MouseEventArgs e) {
+            _sourceIndex = -1;
+        }
+
+        private void ListBox1_SelectedIndexChanged(object sender, EventArgs e) {
+            UpdateMoveButtonsEnabled(listBox1); if (listBox1.SelectedItem != null) {
+                button3.Enabled = true;
+            }
+            // Get the selected item from the list box
+            if (pictureBox1 != null && listBox1.SelectedItem != null) {
+                ListItem selectedItem = (ListItem)listBox1.SelectedItem;
+                string selectedImagePath = selectedItem.Value;
+                string selectedFileName = selectedItem.Text;
+                Name = selectedFileName;
+                Text = selectedFileName;
+                lazyImage = new Lazy<Image>(() => Image.FromFile(selectedImagePath));
+                pictureBox1.Image = lazyImage.Value;
+            }
+        }
+
+        private void UpdateMoveButtonsEnabled(ListBox listBox) {
+            if (listBox.SelectedItem != null && listBox.Items.Count > 1) {
+                int selectedIndex = listBox.SelectedIndex;
+                button5.Enabled = selectedIndex > 0;
+                button6.Enabled = selectedIndex < listBox.Items.Count - 1;
             }
             else {
-                listBox1.Items.Remove(listBox1.SelectedItem);
-            }
-
-        }
-    }
-
-    public static class ListBoxExtension {
-        public static void MoveSelectedItemUp(this ListBox listBox, bool shiftKeyPressed) {
-            if (listBox.SelectedItem != null) {
-                int selectedIndex = listBox.SelectedIndex;
-                if (selectedIndex >= 0 && shiftKeyPressed) {
-                    object selectedItem = listBox.SelectedItem;
-                    listBox.Items.RemoveAt(selectedIndex);
-                    listBox.Items.Insert(0, selectedItem); // insert at the top
-                    listBox.SetSelected(0, true); // select the moved item
-                }
-
-                else if (selectedIndex >= 0) {
-                    object selectedItem = listBox.SelectedItem;
-                    listBox.Items.RemoveAt(selectedIndex);
-                    listBox.Items.Insert(selectedIndex - 1, selectedItem); // move the item up by one position
-                    listBox.SetSelected(selectedIndex - 1, true); // select the moved item
-                }
-
+                button5.Enabled = false;
+                button6.Enabled = false;
             }
         }
+        public class ListItem {
+            public ListItem(string text, string value) {
+                Text = text;
+                Value = value;
+            }
 
-        public static void MoveSelectedItemDown(this ListBox listBox, bool shiftKeyPressed) {
-            if (listBox.SelectedItem != null) {
-                int selectedIndex = listBox.SelectedIndex;
-                if (selectedIndex >= 0 && shiftKeyPressed) {
-                    int lastIndex = listBox.Items.Count - 1; // get the index of the last item
-                    if (selectedIndex < lastIndex) { // check if not already at the bottom
-                        object selectedItem = listBox.SelectedItem;
-                        listBox.Items.RemoveAt(selectedIndex);
-                        listBox.Items.Insert(lastIndex, selectedItem); // insert at the bottom
-                        listBox.SetSelected(lastIndex, true); // select the moved item
-                    }
-                }
-                else if (selectedIndex >= 0) {
-                    int lastIndex = listBox.Items.Count - 1; // get the index of the last item
-                    if (selectedIndex < lastIndex) { // check if not already at the bottom
-                        object selectedItem = listBox.SelectedItem;
-                        listBox.Items.RemoveAt(selectedIndex);
-                        listBox.Items.Insert(selectedIndex + 1, selectedItem); // move the item down by one position
-                        listBox.SetSelected(selectedIndex + 1, true); // select the moved item
-                    }
-                }
+            public string Text { get; set; }
+            public string Value { get; set; }
+            public override string ToString() {
+                return Text;
             }
         }
     }
